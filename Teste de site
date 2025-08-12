@@ -1,0 +1,318 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Jogo do Carrinho Infinito</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@400;700&display=swap');
+
+  * {
+    box-sizing: border-box;
+  }
+
+  body, html {
+    margin: 0; padding: 0;
+    width: 100%; height: 100%;
+    overflow: hidden;
+    font-family: 'Montserrat', sans-serif;
+    background: linear-gradient(135deg, #667eea, #764ba2);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    color: white;
+  }
+
+  #mensagem {
+    font-size: 36px;
+    font-weight: 900;
+    text-align: center;
+    margin-bottom: 15px;
+    background: linear-gradient(270deg, #ff3c3c, #ffdb3c, #3cff3c, #3cd1ff, #a53cff, #ff3cb7);
+    background-size: 600% 600%;
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    animation: rainbowAnim 5s ease infinite;
+    user-select: none;
+    text-shadow: 0 0 12px rgba(255,255,255,0.7);
+  }
+
+  @keyframes rainbowAnim {
+    0% {background-position: 0% 50%;}
+    50% {background-position: 100% 50%;}
+    100% {background-position: 0% 50%;}
+  }
+
+  #gameArea {
+    position: relative;
+    width: 320px;
+    height: 480px;
+    background: #222;
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: 0 0 30px #0ff;
+  }
+
+  #road {
+    position: absolute;
+    width: 100%;
+    height: 200%;
+    background: repeating-linear-gradient(
+      to bottom,
+      #555 0 20px,
+      #333 20px 40px
+    );
+    animation: roadMove 1s linear infinite;
+  }
+
+  @keyframes roadMove {
+    0% { background-position: 0 0; }
+    100% { background-position: 0 40px; }
+  }
+
+  #car {
+    position: absolute;
+    bottom: 20px;
+    left: 50%;
+    width: 50px;
+    height: 90px;
+    margin-left: -25px;
+    background: url('https://i.imgur.com/6Rm6KqL.png') no-repeat center/contain;
+    transition: left 0.1s;
+    user-select: none;
+  }
+
+  .obstacle {
+    position: absolute;
+    width: 60px;
+    height: 60px;
+    background: #f44336;
+    border-radius: 12px;
+    box-shadow: 0 0 15px #f44336;
+    top: -60px;
+  }
+
+  #scoreBoard {
+    margin-top: 10px;
+    font-size: 20px;
+    font-weight: 700;
+    text-shadow: 0 0 5px #0ff;
+  }
+
+  #controls {
+    margin-top: 15px;
+    display: flex;
+    justify-content: center;
+    gap: 15px;
+  }
+
+  .btnControl {
+    width: 60px;
+    height: 60px;
+    border-radius: 50%;
+    border: none;
+    background: #0ff;
+    color: #222;
+    font-size: 30px;
+    font-weight: 700;
+    cursor: pointer;
+    box-shadow: 0 0 15px #0ff;
+    user-select: none;
+    transition: background-color 0.3s ease;
+  }
+
+  .btnControl:active {
+    background-color: #3cf;
+  }
+</style>
+</head>
+<body>
+
+  <div id="mensagem">Você é idiota 😂</div>
+
+  <div id="gameArea">
+    <div id="road"></div>
+    <div id="car"></div>
+  </div>
+
+  <div id="scoreBoard">Pontuação: 0</div>
+
+  <div id="controls">
+    <button class="btnControl" id="btnLeft">&#8592;</button>
+    <button class="btnControl" id="btnRight">&#8594;</button>
+  </div>
+
+<script>
+  const car = document.getElementById('car');
+  const gameArea = document.getElementById('gameArea');
+  const scoreBoard = document.getElementById('scoreBoard');
+  const mensagem = document.getElementById('mensagem');
+  const btnLeft = document.getElementById('btnLeft');
+  const btnRight = document.getElementById('btnRight');
+
+  let carX = 135; // posição inicial do carro (px)
+  let carY = gameArea.clientHeight - 110;
+  const carWidth = 50;
+  const gameWidth = gameArea.clientWidth;
+
+  let obstacles = [];
+  let obstacleSpeed = 3;
+  let spawnInterval;
+  let gameLoopId;
+  let score = 0;
+  let gameStarted = false;
+
+  // Posiciona o carro inicialmente
+  car.style.left = `${carX}px`;
+  car.style.bottom = '20px';
+
+  // Função para criar obstáculos
+  function criarObstaculo() {
+    const obstacle = document.createElement('div');
+    obstacle.classList.add('obstacle');
+
+    // Posição aleatória horizontal dentro da pista
+    const minX = 10;
+    const maxX = gameWidth - 70;
+    const posX = Math.floor(Math.random() * (maxX - minX + 1)) + minX;
+
+    obstacle.style.left = `${posX}px`;
+    obstacle.style.top = '-60px';
+
+    gameArea.appendChild(obstacle);
+    obstacles.push(obstacle);
+  }
+
+  // Move os obstáculos para baixo e remove os que saem da tela
+  function moverObstaculos() {
+    obstacles.forEach((obs, i) => {
+      let top = parseFloat(obs.style.top);
+      top += obstacleSpeed;
+      obs.style.top = `${top}px`;
+
+      // Remover se saiu da tela
+      if (top > gameArea.clientHeight) {
+        obs.remove();
+        obstacles.splice(i, 1);
+        score++;
+        scoreBoard.textContent = `Pontuação: ${score}`;
+      }
+
+      // Checar colisão com o carro
+      if (colidiu(obs)) {
+        reiniciarJogo();
+      }
+    });
+  }
+
+  // Detecta colisão entre o carro e o obstáculo
+  function colidiu(obstacle) {
+    const rectCar = car.getBoundingClientRect();
+    const rectObs = obstacle.getBoundingClientRect();
+
+    return !(
+      rectCar.right < rectObs.left ||
+      rectCar.left > rectObs.right ||
+      rectCar.bottom < rectObs.top ||
+      rectCar.top > rectObs.bottom
+    );
+  }
+
+  // Movimento do carro (ajustando posição)
+  function moverCarro(direcao) {
+    if (!gameStarted) return;
+
+    const step = 15;
+    if (direcao === 'left') {
+      carX = Math.max(10, carX - step);
+    } else if (direcao === 'right') {
+      carX = Math.min(gameWidth - carWidth - 10, carX + step);
+    }
+    car.style.left = `${carX}px`;
+  }
+
+  // Loop principal do jogo
+  function gameLoop() {
+    moverObstaculos();
+    gameLoopId = requestAnimationFrame(gameLoop);
+  }
+
+  // Inicia o jogo: limpa obstáculos, reset pontuação, etc
+  function iniciarJogo() {
+    mensagem.style.display = 'none';
+    score = 0;
+    scoreBoard.textContent = `Pontuação: ${score}`;
+    obstacles.forEach(o => o.remove());
+    obstacles = [];
+    carX = 135;
+    car.style.left = `${carX}px`;
+
+    gameStarted = true;
+
+    spawnInterval = setInterval(criarObstaculo, 1500);
+    gameLoop();
+  }
+
+  // Reinicia o jogo após colisão
+  function reiniciarJogo() {
+    clearInterval(spawnInterval);
+    cancelAnimationFrame(gameLoopId);
+    alert(`Você bateu! Sua pontuação foi: ${score}`);
+    iniciarJogo();
+  }
+
+  // Contador de cliques no botão para iniciar o jogo
+  let cliques = 0;
+  const maxCliques = 5;
+
+  // Cria botão inicial para começar a contagem
+  const botaoInicio = document.createElement('button');
+  botaoInicio.textContent = 'Clique aqui para começar';
+  botaoInicio.style.position = 'absolute';
+  botaoInicio.style.left = '50%';
+  botaoInicio.style.top = '50%';
+  botaoInicio.style.transform = 'translate(-50%, -50%)';
+  botaoInicio.style.padding = '15px 30px';
+  botaoInicio.style.fontSize = '20px';
+  botaoInicio.style.fontWeight = '700';
+  botaoInicio.style.borderRadius = '10px';
+  botaoInicio.style.border = 'none';
+  botaoInicio.style.cursor = 'pointer';
+  botaoInicio.style.background = 'linear-gradient(45deg, #4CAF50, #2e8b57)';
+  botaoInicio.style.color = 'white';
+  botaoInicio.style.boxShadow = '0 0 15px rgba(0,255,0,0.7)';
+  document.body.appendChild(botaoInicio);
+
+  botaoInicio.addEventListener('click', () => {
+    cliques++;
+    // Move o botão para lugar aleatório
+    const margem = 20;
+    const larguraMax = window.innerWidth - botaoInicio.offsetWidth - margem;
+    const alturaMax = window.innerHeight - botaoInicio.offsetHeight - margem;
+    const x = Math.random() * larguraMax;
+    const y = Math.random() * alturaMax;
+    botaoInicio.style.left = `${x}px`;
+    botaoInicio.style.top = `${y}px`;
+
+    if (cliques >= maxCliques) {
+      botaoInicio.remove();
+      mensagem.style.display = 'block';
+      iniciarJogo();
+    }
+  });
+
+  // Controles para tocar na tela (mobile)
+  btnLeft.addEventListener('click', () => moverCarro('left'));
+  btnRight.addEventListener('click', () => moverCarro('right'));
+
+  // Controles de teclado para desktop
+  window.addEventListener('keydown', e => {
+    if (!gameStarted) return;
+    if (e.key === 'ArrowLeft') moverCarro('left');
+    else if (e.key === 'ArrowRight') moverCarro('right');
+  });
+</script>
+
+</body>
+</html>
