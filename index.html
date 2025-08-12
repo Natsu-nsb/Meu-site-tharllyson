@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Troll App - Vários Botões</title>
+<style>
+  body {
+    margin: 0;
+    background: linear-gradient(135deg, #1e1e1e, #2c2c2c);
+    font-family: Arial, sans-serif;
+    height: 100vh;
+    overflow: hidden;
+    position: relative;
+  }
+  #topo {
+    position: fixed;
+    top: 10px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: 28px;
+    font-weight: bold;
+    color: white;
+    text-shadow: 0 0 10px #0ff;
+    z-index: 1000;
+  }
+  #feitoKadu {
+    position: fixed;
+    bottom: 10px;
+    right: 10px;
+    font-size: 20px;
+    font-weight: bold;
+    background: linear-gradient(270deg, red, orange, yellow, green, cyan, blue, violet);
+    background-size: 400%;
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    animation: rainbow 5s linear infinite;
+    z-index: 1000;
+  }
+  @keyframes rainbow {
+    0% { background-position: 0% 50%; }
+    100% { background-position: 100% 50%; }
+  }
+  button {
+    position: absolute;
+    padding: 15px 30px;
+    font-size: 20px;
+    border: none;
+    border-radius: 10px;
+    background: linear-gradient(45deg, #4CAF50, #2e8b57);
+    color: white;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    box-shadow: 0 0 15px rgba(0,255,0,0.7);
+    user-select: none;
+  }
+  button:active {
+    transform: scale(1.1) rotate(3deg);
+    box-shadow: 0 0 25px rgba(255,255,0,0.9);
+  }
+  #mensagem {
+    display: none;
+    font-size: 28px;
+    color: red;
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    text-align: center;
+    animation: piscar 1s infinite alternate;
+    z-index: 999;
+  }
+  @keyframes piscar {
+    0% { opacity: 1; }
+    100% { opacity: 0.5; }
+  }
+</style>
+</head>
+<body>
+
+  <div id="topo">Tharllyso</div>
+  <div id="feitoKadu">FEITO PARA KADU</div>
+  <div id="mensagem">Você é idiota 😂</div>
+
+<script>
+document.addEventListener("deviceready", () => {
+  let cliques = 0;
+  const maxCliques = 5;
+  const mensagem = document.getElementById("mensagem");
+  const body = document.body;
+  const botoes = [];
+
+  function criarBotao() {
+    const botao = document.createElement("button");
+    botao.textContent = "Começar";
+    botao.style.left = `${(window.innerWidth / 2) - 75}px`;
+    botao.style.top = `${(window.innerHeight / 2) - 35}px`;
+
+    botao.addEventListener("click", () => {
+      cliques++;
+      if (cliques >= maxCliques) {
+        // Remove todos os botões e mostra mensagem
+        botoes.forEach(b => b.remove());
+        mensagem.style.display = "block";
+        return;
+      }
+      moverBotoes();
+      adicionarBotao();
+    });
+
+    body.appendChild(botao);
+    botoes.push(botao);
+  }
+
+  function moverBotoes() {
+    const margem = 20;
+    botoes.forEach(botao => {
+      const larguraMax = window.innerWidth - botao.offsetWidth - margem;
+      const alturaMax = window.innerHeight - botao.offsetHeight - margem;
+      const x = Math.random() * larguraMax;
+      const y = Math.random() * alturaMax;
+      botao.style.left = `${x}px`;
+      botao.style.top = `${y}px`;
+    });
+  }
+
+  function adicionarBotao() {
+    criarBotao();
+  }
+
+  // Começa criando 1 botão
+  criarBotao();
+});
+</script>
+
+</body>
+</html>
